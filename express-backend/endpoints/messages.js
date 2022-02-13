@@ -4,7 +4,7 @@ const router = express.Router();
 const connection = require("../database/db.js");
 require("dotenv").config();
 const cron = require("cron").CronJob;
-const moment = require('moment');
+const moment = require("moment");
 
 const accountSid = process.env.accountSid;
 const authToken = process.env.authToken;
@@ -14,11 +14,12 @@ module.exports = client;
 const pendingEvents = [];
 const pendingJobs = [];
 const uniqueEventIds = new Map();
+const deleteIncomingEvents = new Set();
 
 router.post("/createMessage", async (req, res) => {
   try {
     const { message, executionTime, recipient } = req.body;
-    let convertedTime = moment(executionTime).format('YYYY-MM-DD HH:mm:ss');
+    let convertedTime = moment(executionTime).format("YYYY-MM-DD HH:mm:ss");
     connection
       .promise()
       .query(
@@ -53,6 +54,13 @@ router.get("/getMessages/:country/:location", async (req, res) => {
       }),
     }));
 
+    for (let x = 0; x < data.length; x++) {
+      if (deleteIncomingEvents.has(data[x].messagesId)) {
+        data.splice(x, 1);
+        x--;
+      }
+    }
+
     res.send(data);
   } catch (err) {
     res.sendStatus(400);
@@ -86,26 +94,10 @@ const deleteEvent = (messageId) => {
     }
   }
 
-  connection
-    .promise()
-    .query("DELETE FROM messages WHERE messagesId=?", [messageId])
-    .then()
-    .then();
-};
-
-const deleteDoneEvent = async (messageId) => {
-  try {
-    await connection
-      .promise()
-      .query("DELETE messages FROM messages WHERE messagesId=?;", [messageId]);
-    deleteEvent(messageId);
-  } catch (err) {
-    console.log(err);
-  }
+  deleteIncomingEvents.add(messageId);
 };
 
 const createPendingEvents = () => {
-  console.log("list of pending events" + pendingEvents);
   for (let x = 0; x < pendingEvents.length; x++) {
     if (uniqueEventIds.get(pendingEvents[x].messagesId) == 0) {
       uniqueEventIds.set(pendingEvents[x].messagesId, 1);
@@ -123,7 +115,7 @@ const createPendingEvents = () => {
             .catch((err) => {
               console.log(err);
             });
-          /* deleteDoneEvent(pendingEvents[x].messagesId); */
+          deleteIncomingEvents.add(pendingEvents[x].messagesid);
         },
         null,
         true,
@@ -133,7 +125,6 @@ const createPendingEvents = () => {
       pendingJobs.push(job);
     }
   }
-  console.log("pending jobs: " + pendingJobs);
 };
 
 const deleteOldEvents = () => {
@@ -144,47 +135,35 @@ const deleteOldEvents = () => {
 };
 
 const stopOldJobs = () => {
-  const currentTime = new Date();
   for (let x = 0; x < pendingEvents.length; x++) {
-    if (pendingEvents[x].executionTime < currentTime) {
-      uniqueEventIds.delete(pendingEvents[x].messagesId);
-      pendingEvents.splice(x, 1);
-      pendingJobs[x].stop();
-      pendingJobs.splice(x, 1);
-    }
+    uniqueEventIds.delete(pendingEvents[x].messagesId);
+    pendingEvents.splice(x, 1);
+    pendingJobs[x].stop();
+    pendingJobs.splice(x, 1);
+    x--;
   }
 };
 
 const populateCurrentEvents = async () => {
   initialPopulateCurrentEvents();
-  const job = new cron("0 */10 * * * *", async () => {
+  const job = new cron("*/30 * * * * *", async () => {
     stopOldJobs();
     deleteOldEvents();
     let messages;
-    if (checkDaylightSavingsTime) {
-      messages = await connection
-        .promise()
-        .query(
-          "SELECT * FROM messages WHERE executionTime <= NOW() + INTERVAL 10 MINUTE + INTERVAL 5 HOUR;"
-        )
-        .then()
-        .catch((err) => console.log(err));
-    } else {
-      messages = await connection
-        .promise()
-        .query(
-          "SELECT * FROM messages WHERE executionTime <= NOW() + INTERVAL 10 MINUTE + INTERVAL 4 HOUR"
-        )
-        .then()
-        .catch((err) => console.log(err));
-    }
+    messages = await connection
+      .promise()
+      .query(
+        "SELECT * FROM messages WHERE executionTime <= NOW() + INTERVAL 10 MINUTE;"
+      )
+      .then()
+      .catch((err) => console.log(err));
+
     messages[0].forEach((item) => {
       if (!uniqueEventIds.has(item.messagesId)) {
         pendingEvents.push(item);
         uniqueEventIds.set(item.messagesId, 0);
       }
     });
-    console.log(pendingEvents);
     await createPendingEvents();
   });
 
@@ -195,30 +174,20 @@ const initialPopulateCurrentEvents = async () => {
   stopOldJobs();
   deleteOldEvents();
   let messages;
-  if (checkDaylightSavingsTime) {
-    messages = await connection
-      .promise()
-      .query(
-        "SELECT * FROM messages WHERE executionTime <= NOW() + INTERVAL 10 MINUTE + INTERVAL 5 HOUR;"
-      )
-      .then()
-      .catch((err) => console.log(err));
-  } else {
-    messages = await connection
-      .promise()
-      .query(
-        "SELECT * FROM messages WHERE executionTime <= NOW() + INTERVAL 10 MINUTE + INTERVAL 4 HOUR"
-      )
-      .then()
-      .catch((err) => console.log(err));
-  }
+  messages = await connection
+    .promise()
+    .query(
+      "SELECT * FROM messages WHERE executionTime <= NOW() + INTERVAL 10 MINUTE;"
+    )
+    .then()
+    .catch((err) => console.log(err));
+
   messages[0].forEach((item) => {
     if (!uniqueEventIds.has(item.messagesId)) {
       pendingEvents.push(item);
       uniqueEventIds.set(item.messagesId, 0);
     }
   });
-  console.log(pendingEvents);
   await createPendingEvents();
 };
 

@@ -1,0 +1,13 @@
+.login-form,.register-form{
+    text-align: center;
+}
+
+.username-form,.password-form,.confirm-password-form,.name-form{
+    padding-top: 20px;
+    padding-bottom: 20px;
+    color: #2187b6;
+}
+
+div{
+    background-color: #2b2929;
+}

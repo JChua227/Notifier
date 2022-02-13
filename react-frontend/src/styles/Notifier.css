@@ -1,0 +1,19 @@
+*{
+    color: #2187b6;
+}
+
+.createNotificationInput{
+    width: 50%;
+    background-color: rgb(127, 143, 235);
+    color: black;
+}
+
+.recipientPhoneNumber{
+    background-color: rgb(127,143,235);
+    color: black;
+    width: 20%;
+}
+
+.date,.submitButton{
+    margin: 20px;
+}

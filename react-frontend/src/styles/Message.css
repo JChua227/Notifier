@@ -1,0 +1,13 @@
+button {
+  color: blue;
+}
+
+.message {
+  border-radius: 25px;
+  background: hsl(278, 69%, 16%);
+  padding-top: 20px;
+  padding-bottom: 20px; 
+  width: 50%;
+  text-align: center;
+  margin: auto;
+}

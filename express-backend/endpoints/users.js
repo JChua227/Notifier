@@ -6,8 +6,8 @@ router.post("/create", async (req, res) => {
   const { username, password } = req.body;
   try {
     const result = await validUser(username);
-    if (result) {
-      res.sendStatus(401);
+    if (result!==undefined) {
+      return res.sendStatus(401);
     }
     connection
       .promise()

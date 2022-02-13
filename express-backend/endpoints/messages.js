@@ -4,6 +4,7 @@ const router = express.Router();
 const connection = require("../database/db.js");
 require("dotenv").config();
 const cron = require("cron").CronJob;
+const moment = require('moment');
 
 const accountSid = process.env.accountSid;
 const authToken = process.env.authToken;
@@ -15,19 +16,22 @@ const pendingJobs = [];
 const uniqueEventIds = new Map();
 
 router.post("/createMessage", async (req, res) => {
-  const { message, executionTime, recipient } = req.body;
-  connection
-    .promise()
-    .query(
-      "INSERT INTO messages (userId,messages,executionTime,recipient) VALUES(?,?,?,?)",
-      [req.session.user.result.userId, message, executionTime, recipient]
-    );
-
-  let tenMinutes = 10 * 60000;
-  let convertedDate = new Date(executionTime);
-
-  if (convertedDate - new Date() < tenMinutes) {
-    await initialPopulateCurrentEvents();
+  try {
+    const { message, executionTime, recipient } = req.body;
+    let convertedTime = moment(executionTime).format('YYYY-MM-DD HH:mm:ss');
+    connection
+      .promise()
+      .query(
+        `INSERT INTO messages (userId,messages,executionTime,recipient) VALUES(?,?,?,?)`,
+        [req.session.user.result.userId, message, convertedTime, recipient]
+      );
+    let tenMinutes = 10 * 60000;
+    let convertedDate = new Date(convertedTime);
+    if (convertedDate - new Date() < tenMinutes) {
+      await initialPopulateCurrentEvents();
+    }
+  } catch (err) {
+    console.log(err);
   }
 });
 

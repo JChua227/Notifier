@@ -59,7 +59,6 @@ export const Register = () => {
     });
 
     return navigate('/login')
-    //unique usernames only...deny when one already exists
   };
 
   return (

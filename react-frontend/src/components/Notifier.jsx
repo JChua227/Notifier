@@ -10,18 +10,11 @@ export const Notifier = () => {
   const [expirationDate, setExpirationDate] = useState("");
   const [newMessage, setNewMessage] = useState("");
   const [recipient, setRecipient] = useState("");
-  const [convertTemp, setConvertTemp] = useState("");
 
   const createMessage = async () => {
     let temp = new Date(expirationDate);
-    temp.setHours(temp.getHours() - 5);
     temp.setSeconds(temp.getSeconds() + new Date().getSeconds());
-    temp = temp.toLocaleString("en-US", { timeZone: "America/New_York" });
-    const executionTime = new Date(temp)
-      .toISOString()
-      .slice(0, 19)
-      .replace("T", " ");
-
+    const executionTime = new Date(temp).toISOString();
 
     await axios
       .post(
@@ -86,7 +79,6 @@ export const Notifier = () => {
             onChange={(e) => setExpirationDate(e.target.value)}
             className="date"
           ></input>
-          <p>{expirationDate}</p>
           <label htmlFor="submit"></label>
           <button
             className="btn btn-primary submitButton"

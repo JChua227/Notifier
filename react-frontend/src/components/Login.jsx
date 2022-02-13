@@ -28,7 +28,8 @@ export const Login = () => {
         return;
       });
       
-    return navigate("/notifier");
+    navigate("/notifier");
+    window.location.reload(false);
   };
 
   return (
